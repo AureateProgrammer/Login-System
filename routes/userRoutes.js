@@ -39,6 +39,7 @@ router.post("/register", async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
+    const invalidCredentialsMessage = "Incorrect email or password.";
 
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password are required." });
@@ -47,24 +48,27 @@ router.post("/login", async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      return res.status(401).json({ message: "Invalid email or password." });
+      return res.status(400).json({ message: invalidCredentialsMessage });
     }
 
     const passwordsMatch = await bcrypt.compare(password, user.password);
 
     if (!passwordsMatch) {
-      return res.status(401).json({ message: "Invalid email or password." });
+      return res.status(400).json({ message: invalidCredentialsMessage });
     }
 
     const token = jwt.sign(
-      { id: user._id, email: user.email },
+      { _id: user._id, username: user.username },
       process.env.JWT_SECRET,
       { expiresIn: "1h" }
     );
 
+    const userObject = user.toObject();
+    delete userObject.password;
+
     res.json({
-      message: "Login successful.",
       token,
+      user: userObject,
     });
   } catch (error) {
     res.status(500).json({ message: "Error logging in.", error: error.message });
