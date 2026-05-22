@@ -13,30 +13,24 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "Username, email, and password are required." });
     }
 
-    const existingUser = await User.findOne({
-      $or: [{ email }, { username }],
-    });
+    const existingUser = await User.findOne({ email });
 
     if (existingUser) {
-      return res.status(409).json({ message: "A user with that email or username already exists." });
+      return res.status(400).json({ message: "A user with that email already exists." });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = await User.create({
+    const user = new User({
       username,
       email,
-      password: hashedPassword,
+      password,
     });
 
-    res.status(201).json({
-      message: "User registered successfully.",
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
-      },
-    });
+    await user.save();
+
+    const userObject = user.toObject();
+    delete userObject.password;
+
+    res.status(201).json(userObject);
   } catch (error) {
     res.status(500).json({ message: "Error registering user.", error: error.message });
   }
